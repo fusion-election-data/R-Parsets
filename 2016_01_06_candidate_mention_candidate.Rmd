@@ -2,7 +2,7 @@
 title: "Candidate Mentions"
 author: "Kate Stohr"
 date: "January 6, 2016"
-output: html_document
+output: pdf_document
 ---
 Candidate mentions provided by Daniel Mclaughlin 2015-01-05.
 

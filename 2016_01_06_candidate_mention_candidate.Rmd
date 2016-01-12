@@ -1,0 +1,172 @@
+---
+title: "Candidate Mentions"
+author: "Kate Stohr"
+date: "January 6, 2016"
+output: html_document
+---
+Candidate mentions provided by Daniel Mclaughlin 2015-01-05.
+
+https://fusionnetwork.slack.com/files/daniel.mclaughlin/F0HM7BEG3/candidates_mentioning_candidates.csv
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(ggparallel)
+```
+
+###Load data
+
+```{r message=FALSE, warning=FALSE}
+scrapestatus<-read.csv("data/2016_01_08_scraping_status.csv", check.names=TRUE)
+cmc<-read.csv("data/2016_01_05_candidates_mentioning_candidates.csv")
+```
+
+###Process Data 
+
+```{r message=FALSE, warning=FALSE}
+# assign source names to candidates by acct
+# assign source party affiliation 
+dim(cmc) #get dims of original data
+labels<-select(scrapestatus, Name, Party.Affiliation, Twitter)
+names(labels)<-c("source_name", "source_party", "source_account")
+labels$source_account<-tolower(labels$source_account)
+cmc<-left_join(cmc, labels, by =c("source" = "source_account"))
+dim(cmc) #check dims
+```
+
+```{r message=FALSE, warning=FALSE}
+# assign target names to candidates by acct
+# assign target party affiliation 
+names(labels)<-c("target_name", "target_party", "target_account")
+cmc<-left_join(cmc, labels, by =c("target" = "target_account"))
+dim(cmc) #check dims 
+
+```
+
+```{r message=FALSE, warning=FALSE}
+#Filter data to exclude observations of candidates mentioning themselves 
+c_at_c<-cmc[cmc$source_name != cmc$target_name, ]
+dim(c_at_c) #check dims
+```
+
+###Explore Data
+```{r message=FALSE, warning=FALSE}
+tot_mentions<-sum(c_at_c$mentions)
+tot_mentions
+
+#Get table of mentions by source in descending order
+src_agg<-aggregate(mentions ~ source_name, data=c_at_c, sum)
+src_agg_sorted<-arrange(src_agg, desc(mentions))
+head(src_agg_sorted)
+tail(src_agg_sorted)
+
+#Get table of mentions by target in descending order
+trg_agg<-aggregate(mentions ~ target_name, data=c_at_c, sum)
+trg_agg_sorted<-arrange(trg_agg, desc(mentions))
+head(trg_agg_sorted)
+tail(trg_agg_sorted)
+
+#Get table of mentions by source_party in descending order
+src_party<-aggregate(mentions ~ source_party, data=c_at_c, sum)
+src_party
+
+#Get table of mentions by target_party in descending order
+trg_party<-aggregate(mentions ~ target_party, data=c_at_c, sum)
+trg_party
+```
+
+##Candidate share of mentions by source party 
+```{r message=FALSE, warning=FALSE}
+top_trg_byparty<-aggregate(mentions ~ target_name + source_party, data=c_at_c, sum)
+top_trg_byparty<-arrange(top_trg_byparty, desc(mentions))
+
+top_trg_byparty$source_party<-relevel(top_trg_byparty$source_party, ref="Republican")
+
+share<-ggplot(data=top_trg_byparty, aes(y=mentions, x=reorder(target_name, mentions),
+                               fill=source_party)) +
+        geom_bar(stat="identity",
+                 position=position_dodge())+
+        coord_flip()+
+        xlab("candidate")+
+        ylab("number of mentions")+
+        ggtitle("Candidates Tagged by Other Candidates")+
+        labs(fill = "Source of tag (by party)")+
+        theme_minimal()
+share
+```
+
+Candidates mentioned other candidates `r tot_mentions` times. 
+
+## 5 Most Catty Candidates
+```{r message=FALSE, warning=FALSE}
+#Subset top 5 candidates with most mentions to their name. 
+most_catty<-src_agg_sorted$source_name[1:5]
+most_catty_subset<-filter(c_at_c, source_name %in% most_catty)
+##write.csv(most_catty_subset, file = "data/max_5_catty_data.csv")
+```
+
+
+```{r message=FALSE, warning=FALSE}
+#plot catty candidates
+max_catty<-ggparallel(
+        vars = list("source_name", "target_name"),
+        data=most_catty_subset, 
+        method = "parset", 
+        weight = "mentions", 
+        order = 1, 
+        text.angle = 360, 
+        alpha =.5,
+        label.size = 6,
+        )+ 
+        theme(legend.position="none")
+max_catty
+```
+
+## 5 Least Catty Candidates
+```{r message=FALSE, warning=FALSE}
+#Subset top 5 candidates with least mentions to their name. 
+src_agg_asc<-arrange(src_agg, mentions)
+least_catty<-src_agg_asc$source_name[1:5]
+least_catty_subset<-filter(c_at_c, source_name %in% least_catty)
+##write.csv(least_catty_subset, file = "data/min_5_catty_data.csv")
+```
+
+```{r message=FALSE, warning=FALSE}
+min_catty<-ggparallel(
+        vars = list("source_name", "target_name"),
+        data=least_catty_subset, 
+        method = "parset", 
+        weight = "mentions", 
+        order = -1, 
+        text.angle = 360, 
+        alpha =.5,
+        label.size = 6, 
+        )+ 
+        theme(legend.position="none")
+min_catty
+```
+
+## Top 5 Most Narcissistic 
+
+```{r message=FALSE, warning=FALSE}
+#filter mentions of candidates targeting themselves
+c_at_self<-cmc[cmc$source_name == cmc$target_name, ]
+c_at_self_sorted<-arrange(c_at_self, desc(mentions))
+##write.csv(c_at_self_sorted, file = "data/max_narcissits_data.csv")
+```
+
+```{r message=FALSE, warning=FALSE}
+narcissits<-ggparallel(
+        vars = list("source_name", "target_name"),
+        data=c_at_self_sorted[1:5,], 
+        method = "parset", 
+        weight = "mentions", 
+        order = 1, 
+        text.angle = 360, 
+        alpha =.5,
+        label.size = 6 
+        )+
+        theme(legend.position="none")
+narcissits
+```
+

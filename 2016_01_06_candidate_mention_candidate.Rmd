@@ -2,7 +2,7 @@
 title: "Candidate Mentions"
 author: "Kate Stohr"
 date: "January 6, 2016"
-output: pdf_document
+output: html_document
 ---
 Candidate mentions provided by Daniel Mclaughlin 2015-01-05.
 
@@ -24,6 +24,10 @@ cmc<-read.csv("data/2016_01_05_candidates_mentioning_candidates.csv")
 ###Process Data 
 
 ```{r message=FALSE, warning=FALSE}
+
+# remove noncandidates 
+cmc<-filter(cmc, target!="joebiden")
+rm
 # assign source names to candidates by acct
 # assign source party affiliation 
 dim(cmc) #get dims of original data
@@ -168,5 +172,47 @@ narcissits<-ggparallel(
         )+
         theme(legend.position="none")
 narcissits
+```
+
+## Tables for info graphics 
+###Candidates who tagged other candidates the most
+```{r}
+mention_agg<-aggregate(mentions ~ target_name, data=most_catty_subset, sum)
+mention_agg
+
+tot_mention_agg<-aggregate(mentions~ target_name, data=c_at_c, sum)
+
+identical(sum(tot_mention_agg$mentions), tot_mentions)
+
+per_tot<-sum(mention_agg$mentions)/sum(tot_mention_agg$mentions)
+
+per_tot
+
+src_mention_agg<-aggregate(mentions ~ source_name, data=most_catty_subset, sum)
+
+src_mention_agg
+```
+
+###Candidates who tagged other candidates the most
+```{r}
+least_mention_agg<-aggregate(mentions ~ target_name, data=least_catty_subset, sum)
+least_mention_agg
+
+least_per_tot<-sum(least_mention_agg$mentions)/sum(tot_mention_agg$mentions)
+
+least_per_tot
+
+least_src_mention_agg<-aggregate(mentions ~ source_name, data=least_catty_subset, sum)
+
+least_src_mention_agg
+```
+
+###Candidates who tagged themselves the most
+
+```{r}
+c_at_self_sorted[1:5, c(4,3)]
+
+narc_per_tot<-sum(least_mention_agg$mentions)/sum(tot_mention_agg$mentions)
+
 ```
 
